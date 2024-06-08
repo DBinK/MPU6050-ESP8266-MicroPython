@@ -46,6 +46,7 @@ def window_filter(value, values, window_size=50):
 
 def main(tim):
     
+    global i2c1, mpu
     global alpha, dt, roll, pitch, yaw, yaw_last, yaw_offset, yaw_deg
     global pitch_deg_values, roll_deg_values, yaw_fix_values, yaw_offset_values
     
@@ -69,7 +70,7 @@ def main(tim):
     pitch_deg = pitch * 180/math.pi
     roll_deg  = roll  * 180/math.pi
 
-    yaw      = yaw + gyro[2] * dt - (0.18) # 零漂参数
+    yaw      = yaw + gyro[2] * dt - (0.1644487) # 零漂参数
     yaw_deg  = yaw * 180/math.pi * 0.001   # 不知道为什么乘个0.001数据就对了
     
     # 获取温度
@@ -84,6 +85,9 @@ def main(tim):
     pitch_deg = window_filter(pitch_deg, pitch_deg_values, 10)
     roll_deg  = window_filter(roll_deg, roll_deg_values, 10)
     yaw_deg   = window_filter(yaw_deg, yaw_fix_values, 10)
+    
+    if pitch_deg == 0 and roll_deg == 0:
+        mpu = mpu6050.accel(i2c1)
     
     # 打印数据
     x = "pitch = %.2f  roll = %.2f  yaw = %.2f  yaw_offset = %.2f  avg_yaw_offset = %.2f" % (pitch_deg, roll_deg, yaw_deg, yaw_offset, avg_yaw_offset)
