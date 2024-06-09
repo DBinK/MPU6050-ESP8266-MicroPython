@@ -31,8 +31,8 @@ class IMUController:
         
         self.moto = Moto(1,2)
         
-        self.pid = PID(0.08, 0, 0, setpoint=0)
-        self.pid.output_limits = (-800, 800)
+        self.pid = PID(1, 0, 0, setpoint=0)
+        self.pid.output_limits = (-1023, 1023)
         self.pid.sample_time = self.dt
     
     def window_filter(self, value, values, window_size=50):
@@ -79,7 +79,7 @@ class IMUController:
             
             speed = int(self.roll_deg / 90 * 1023)
             
-            speed = self.pid(-speed)
+            #speed = self.pid(speed)
             
             self.moto.setSpeed(speed)
         else:
