@@ -1,7 +1,9 @@
 from machine import SoftI2C, Pin, UART, Timer
-import mpu6050
 import time
 import math
+
+from moto import Moto
+import mpu6050
 
 # 构建I2C对象
 i2c1 = SoftI2C(scl=Pin(42), sda=Pin(41))
@@ -15,7 +17,7 @@ uart.write('Hello 01Studio!')  # 发送一条数据
 # 初始化互补滤波参数
 alpha = 0.5 # 陀螺仪计权重
 
-dt = 0.002  # 采样间隔
+dt = 0.01  # 采样间隔
 
 roll = 0
 pitch = 0
@@ -32,6 +34,7 @@ pitch_deg_values = []
 roll_deg_values = []
 yaw_fix_values = []
 
+moto = Moto(1,2)
 
 def window_filter(value, values, window_size=50):
     # 将值添加到列表中
@@ -44,11 +47,12 @@ def window_filter(value, values, window_size=50):
     # 返回平均值
     return sum(values) / len(values)
 
-def main(tim):
+def main(tim_1):
     
     global i2c1, mpu
-    global alpha, dt, roll, pitch, yaw, yaw_last, yaw_offset, yaw_deg
+    global alpha, dt, roll, pitch, yaw, yaw_last, yaw_offset
     global pitch_deg_values, roll_deg_values, yaw_fix_values, yaw_offset_values
+    global roll_deg, pitch_deg, yaw_deg
     
     # 获取加速度计数据
     data = mpu.get_values()
@@ -70,8 +74,8 @@ def main(tim):
     pitch_deg = pitch * 180/math.pi
     roll_deg  = roll  * 180/math.pi
 
-    yaw      = yaw + gyro[2] * dt - (0.1644487) # 零漂参数
-    yaw_deg  = yaw * 180/math.pi * 0.001   # 不知道为什么乘个0.001数据就对了
+    yaw      = yaw + gyro[2] * dt*0.001 - (0.000929) # 零漂参数
+    yaw_deg  = yaw * 180/math.pi
     
     # 获取温度
     temperature = data['Tmp']
@@ -90,12 +94,30 @@ def main(tim):
         mpu = mpu6050.accel(i2c1)
     
     # 打印数据
-    x = "pitch = %.2f  roll = %.2f  yaw = %.2f  yaw_offset = %.2f  avg_yaw_offset = %.2f" % (pitch_deg, roll_deg, yaw_deg, yaw_offset, avg_yaw_offset)
+    x = "roll = %.2f  pitch = %.2f  yaw = %.2f  yaw_offset = %.2f  avg_yaw_offset = %.2f" % (roll_deg, pitch_deg, yaw_deg, yaw_offset, avg_yaw_offset)
     print(x)
-    w = "test:%.2f,%.2f,%.2f \n" % (pitch_deg, roll_deg, yaw_deg)
+    w = "test:%.2f,%.2f,%.2f \n" % (roll_deg, pitch_deg, yaw_deg)
     uart.write(w)  # 发送数据到串口
+
+def control(tim_2):
+    global roll_deg, pitch_deg 
+    abs_roll_deg = abs(roll_deg)
+    
+    if abs_roll_deg > 10:
+        speed = int(roll_deg/90*1023)
+        moto.setSpeed(speed)
+        
+    elif abs_roll_deg < 10:
+        moto.setSpeed(0)
+    
+    if pitch_deg == 0 and roll_deg == 0:
+        moto.setSpeed(0)
     
 #使用定时器1
-tim = Timer(1)
-tim.init(period=int(dt*1000), mode=Timer.PERIODIC,callback=main) #周期为1000ms
+tim_1 = Timer(1)
+tim_1.init(period=int(dt*1000), mode=Timer.PERIODIC,callback=main) 
+
+#使用定时器2
+tim_2 = Timer(2)
+tim_2.init(period=int(dt*1000), mode=Timer.PERIODIC,callback=control) 
 
