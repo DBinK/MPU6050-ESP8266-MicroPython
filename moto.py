@@ -3,8 +3,10 @@ import time
 
 class Moto:
     def __init__(self,speed_pin,switch_pin,signal_pin=None):
+        
         self.moto_speed  = PWM(Pin(speed_pin),  freq=50, duty=0)
         self.moto_switch = PWM(Pin(switch_pin),  freq=50, duty=0)
+
         if signal_pin != None:
             self.moto_signal = Pin(signal_pin, Pin.IN)
         else:
